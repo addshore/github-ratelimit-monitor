@@ -10,6 +10,71 @@
     />
   </head>
   <body>
+    <!-- ===== Landing page (shown when not authenticated) ===== -->
+    <div id="landing">
+      <header class="landing-header">
+        <span class="landing-brand">GitHub Rate Limit Monitor</span>
+        <a href="https://github.com/addshore/github-ratelimit-monitor" target="_blank" rel="noopener" class="landing-gh-link">GitHub ↗</a>
+      </header>
+
+      <div class="landing-main">
+        <section class="landing-hero">
+          <h1 class="landing-title">Monitor your GitHub API rate limits in real time</h1>
+          <p class="landing-sub">
+            Live-polls the GitHub rate-limit endpoint, graphs every resource as it drains and resets,
+            and persists days of history in your browser — no backend required.
+          </p>
+
+          <div class="landing-features">
+            <div class="landing-feature">
+              <span class="lf-icon">📈</span>
+              <span>Real-time charts for every rate-limit resource</span>
+            </div>
+            <div class="landing-feature">
+              <span class="lf-icon">🗄️</span>
+              <span>Compressed browser storage — weeks of history</span>
+            </div>
+            <div class="landing-feature">
+              <span class="lf-icon">⏱️</span>
+              <span>Configurable polling, trend projection &amp; reset lines</span>
+            </div>
+            <div class="landing-feature">
+              <span class="lf-icon">🔒</span>
+              <span>GitHub OAuth — your token never leaves your browser</span>
+            </div>
+          </div>
+
+          <button id="landing-login-btn" class="landing-cta">
+            Login with GitHub to get started
+          </button>
+          <a href="#" id="landing-demo-skip" class="landing-demo-link">or see the example chart →</a>
+        </section>
+
+        <!-- Mini demo preview -->
+        <section class="landing-preview-section">
+          <h2 class="landing-preview-heading">Simulated chart</h2>
+          <p class="landing-preview-sub">login to see your actual rate limits...</p>
+          <div class="landing-preview-frame">
+            <div id="landing-demo-app" class="landing-demo-app">
+              <!-- The sidebar + chart will be cloned/rendered here by JS -->
+              <div id="landing-charts" class="landing-charts"></div>
+            </div>
+            <!-- <div class="landing-preview-overlay">
+              <button id="landing-overlay-login-btn" class="landing-cta landing-cta-sm">
+                Login with GitHub
+              </button>
+            </div> -->
+          </div>
+        </section>
+      </div>
+
+      <footer class="landing-footer">
+        <a href="https://github.com/addshore/github-ratelimit-monitor" target="_blank" rel="noopener">addshore/github-ratelimit-monitor ↗</a>
+        <a href="https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api" target="_blank" rel="noopener">Rate Limit Docs ↗</a>
+      </footer>
+    </div>
+
+    <!-- ===== Full app (shown when authenticated) ===== -->
     <div id="app">
       <!-- ===== Sidebar ===== -->
       <aside id="sidebar">

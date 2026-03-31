@@ -1,0 +1,4 @@
+name = "github-ratelimit-monitor"
+pages_build_output_dir = "dist"
+
+[env.production]

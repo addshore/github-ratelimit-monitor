@@ -27,6 +27,10 @@ let demoGenerator: DemoGenerator | null = null;
 let demoTimerId: number | null = null;
 let currentUser: { login: string; avatar_url: string } | null = null;
 const chartManager = new ChartManager();
+const landingChartManager = new ChartManager();
+let landingPreviewGenerator: DemoGenerator | null = null;
+let landingPreviewTimerId: number | null = null;
+let landingPreviewInitialized = false;
 
 // ---- DOM helper ----
 const $ = (id: string) => document.getElementById(id)!;
@@ -67,20 +71,38 @@ function saveSettings(): void {
 function init(): void {
   settings = loadSettings();
   chartManager.init($('charts-container'));
+  if (!landingPreviewInitialized) {
+    landingChartManager.init($('landing-charts'));
+    landingPreviewInitialized = true;
+  }
   listenForAuth(onAuthenticated);
   initUI();
 
   if (getToken()) {
     startLiveMode(getToken()!);
   } else {
-    startDemoMode();
+    enterLandingMode();
   }
 }
 
 function onAuthenticated(token: string): void {
-  stopDemoMode();
+  leaveLandingMode();
   startLiveMode(token);
   updateAuthUI(true);
+}
+
+function enterLandingMode(): void {
+  document.body.classList.add('landing-active');
+  isDemo = true;
+  isPaused = false;
+  stopLiveMode();
+  startLandingPreview();
+  updateAuthUI(false);
+}
+
+function leaveLandingMode(): void {
+  document.body.classList.remove('landing-active');
+  stopLandingPreview();
 }
 
 // ---- Auth UI ----
@@ -102,9 +124,7 @@ function updateAuthUI(loggedIn: boolean): void {
     $('logout-btn').onclick = () => {
       currentUser = null;
       clearToken();
-      stopLiveMode();
-      startDemoMode();
-      updateAuthUI(false);
+      enterLandingMode();
     };
   } else {
     section.innerHTML =
@@ -128,6 +148,7 @@ async function fetchUser(token: string): Promise<void> {
 
 // ---- Live Mode ----
 function startLiveMode(token: string): void {
+  leaveLandingMode();
   isDemo = false;
   isPaused = false;
   data = loadData();
@@ -145,8 +166,7 @@ function startLiveMode(token: string): void {
       case 'auth_error':
         clearToken();
         stopLiveMode();
-        startDemoMode();
-        updateAuthUI(false);
+        enterLandingMode();
         break;
       case 'error':
         console.error('Poll error:', payload);
@@ -205,6 +225,48 @@ function handleRateLimitData(response: RateLimitResponse): void {
 
   chartManager.addDataPoint(point);
   updateStorageInfo();
+}
+
+function startLandingPreview(): void {
+  landingPreviewGenerator = new DemoGenerator();
+  const previewData = landingPreviewGenerator.generateHistory(50, 4000);
+  const previewLimits = Array.from(
+    new Set(previewData.flatMap((p) => Object.keys(p.resources)))
+  ).sort();
+
+  const previewSettings: AppSettings = {
+    ...settings,
+    intervalSeconds: 4,
+    viewMode: 'combined',
+    displayMode: 'remaining',
+    visibleLimits: previewLimits,
+    timeWindow: '1h',
+    tooltipMode: 'nearest',
+    showResetLines: true,
+    showTrendLines: true,
+    pinYMin: false,
+    pinYMax: false,
+  };
+
+  landingChartManager.render(previewData, previewSettings);
+
+  if (landingPreviewTimerId !== null) {
+    clearInterval(landingPreviewTimerId);
+  }
+
+  landingPreviewTimerId = window.setInterval(() => {
+    if (!landingPreviewGenerator) return;
+    const point = landingPreviewGenerator.generate();
+    landingChartManager.addDataPoint(point);
+  }, 4000);
+}
+
+function stopLandingPreview(): void {
+  if (landingPreviewTimerId !== null) {
+    clearInterval(landingPreviewTimerId);
+    landingPreviewTimerId = null;
+  }
+  landingPreviewGenerator = null;
 }
 
 // ---- Demo Mode ----
@@ -329,6 +391,20 @@ function updateStorageInfo(): void {
 // ---- UI Wiring ----
 function initUI(): void {
   updateAuthUI(!!getToken());
+
+  const landingLoginBtn = document.getElementById('landing-login-btn');
+  if (landingLoginBtn) landingLoginBtn.onclick = () => initiateLogin();
+
+  const landingOverlayLoginBtn = document.getElementById('landing-overlay-login-btn');
+  if (landingOverlayLoginBtn) landingOverlayLoginBtn.onclick = () => initiateLogin();
+
+  const landingDemoSkip = document.getElementById('landing-demo-skip');
+  if (landingDemoSkip) {
+    landingDemoSkip.onclick = (e) => {
+      e.preventDefault();
+      document.querySelector('.landing-preview-section')?.scrollIntoView({ behavior: 'smooth' });
+    };
+  }
 
   // Interval
   const intervalInput = $('interval-input') as HTMLInputElement;
