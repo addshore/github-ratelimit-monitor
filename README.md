@@ -2,6 +2,8 @@
 
 A TypeScript web app to monitor GitHub REST API rate limits in real time.
 
+https://github-ratelimit-monitor.addshore.com/
+
 ![](https://addshore.com/wp-content/uploads/2026/03/Screenshot-2026-03-31-121249.png)
 
 It provides:
