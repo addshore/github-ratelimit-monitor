@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Rate Limit Monitor</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <!-- ===== Sidebar ===== -->
+      <aside id="sidebar">
+        <div class="sidebar-header">
+          <h1>GitHub Rate Limits</h1>
+        </div>
+
+        <!-- 1. Auth -->
+        <div class="sidebar-section" id="auth-section">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- 2. Polling -->
+        <div class="sidebar-section">
+          <label>Polling</label>
+          <div class="polling-row">
+            <div id="polling-status" class="status-indicator">
+              <span class="status-dot"></span>
+              <span class="status-text">Stopped</span>
+            </div>
+            <div class="btn-row">
+              <button id="pause-btn" class="btn-small">Pause</button>
+              <button id="check-now-btn" class="btn-small">▶ Now</button>
+            </div>
+          </div>
+          <div class="input-group" style="margin-top: 6px">
+            <input type="number" id="interval-input" min="1" max="3600" value="10" />
+            <span>sec interval</span>
+          </div>
+        </div>
+
+        <!-- 3. Rate Limits -->
+        <div class="sidebar-section">
+          <label>
+            Rate Limits
+            <a
+              href="https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="label-link"
+              title="GitHub rate limit API docs"
+              >?</a
+            >
+          </label>
+          <div id="limits-checkboxes">
+            <!-- Populated dynamically — hover for descriptions -->
+          </div>
+          <div class="checkbox-actions">
+            <button id="select-all-btn" class="btn-small">All</button>
+            <button id="select-none-btn" class="btn-small">None</button>
+            <button id="select-in-use-btn" class="btn-small" title="Select only limits that currently have requests in use">In Use</button>
+          </div>
+        </div>
+
+        <!-- 4. View Mode -->
+        <div class="sidebar-section inline-section">
+          <label>View</label>
+          <div class="pill-group">
+            <label class="pill"><input type="radio" name="viewMode" value="combined" checked /><span>Combined</span></label>
+            <label class="pill"><input type="radio" name="viewMode" value="individual" /><span>Individual</span></label>
+          </div>
+        </div>
+
+        <!-- 5. Display As -->
+        <div class="sidebar-section">
+          <label>Display As</label>
+          <div class="pill-group">
+            <label class="pill"><input type="radio" name="displayMode" value="remaining" checked /><span>Remaining</span></label>
+            <label class="pill"><input type="radio" name="displayMode" value="percentage" /><span>% Limit</span></label>
+            <label class="pill"><input type="radio" name="displayMode" value="used" /><span>Used</span></label>
+          </div>
+        </div>
+
+        <!-- 6. Tooltip -->
+        <div class="sidebar-section inline-section">
+          <label>Tooltip</label>
+          <div class="pill-group">
+            <label class="pill"><input type="radio" name="tooltipMode" value="nearest" checked /><span>Per line</span></label>
+            <label class="pill"><input type="radio" name="tooltipMode" value="index" /><span>Combined</span></label>
+          </div>
+        </div>
+
+        <!-- 7. Time Window -->
+        <div class="sidebar-section">
+          <label>Time Window</label>
+          <div class="time-slider-wrap">
+            <input type="range" id="time-window-slider" min="0" max="5" step="1" value="2" />
+            <div class="time-slider-labels">
+              <span>30m</span><span>1h</span><span>2h</span><span>6h</span><span>24h</span><span>All</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8+9. Overlays & Y Axis -->
+        <div class="sidebar-section">
+          <div class="two-col-checks">
+            <div class="two-col-group">
+              <span class="two-col-heading">Overlays</span>
+              <label class="checkbox-label" title="Draw a dashed vertical line at each resource's reset time">
+                <input type="checkbox" id="show-reset-lines" /><span>Reset lines</span>
+              </label>
+              <label class="checkbox-label" title="Draw a dotted projection from current usage to full capacity at reset time">
+                <input type="checkbox" id="show-trend-lines" /><span>Trend line</span>
+              </label>
+            </div>
+            <div class="two-col-group">
+              <span class="two-col-heading">Y Axis</span>
+              <label class="checkbox-label" title="Always start the Y axis at 0 for a true-scale view">
+                <input type="checkbox" id="pin-y-min" /><span>Pin min=0</span>
+              </label>
+              <label class="checkbox-label" title="Pin the Y axis maximum to the highest rate limit value">
+                <input type="checkbox" id="pin-y-max" /><span>Pin max=limit</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 10. Data -->
+        <div class="sidebar-section">
+          <label>Data</label>
+          <div class="data-info">
+            <span id="data-points-count">0 pts</span>
+            <span id="data-size">0 KB</span>
+          </div>
+          <div class="button-group">
+            <button id="download-csv-btn" class="btn">Download CSV</button>
+          </div>
+          <div class="button-group" style="margin-top:6px">
+            <button id="clear-window-btn" class="btn btn-danger" title="Delete data points outside the current time window">Clear old</button>
+            <button id="clear-data-btn" class="btn btn-danger">Clear all</button>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+          <a
+            href="https://github.com/addshore/github-ratelimit-monitor"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="docs-link"
+            >addshore/github-ratelimit-monitor ↗</a
+          >
+          <a
+            href="https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="docs-link"
+            >Rate Limit Docs ↗</a
+          >
+        </div>
+      </aside>
+
+      <!-- ===== Main ===== -->
+      <main id="main-content">
+        <div id="demo-banner" class="banner" style="display: none">
+          <span>🔒 Demo Mode</span>
+          <span>—</span>
+          <a href="#" id="login-link">Login with GitHub</a>
+          <span>to see your actual rate limits live</span>
+        </div>
+        <div id="charts-container"></div>
+        <details id="raw-panel" class="raw-panel">
+          <summary>
+            Raw API Response
+            <span id="raw-timestamp" class="raw-timestamp"></span>
+          </summary>
+          <pre id="raw-json">No data yet.</pre>
+        </details>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
